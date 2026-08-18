@@ -1,0 +1,6 @@
+{
+  "benchmark": "SPY",
+  "benchmarkName": "S&P 500",
+  "historyYears": 8,
+  "tickers": ["VOO", "SCHD", "AAPL", "NVDA", "FXAIX"]
+}

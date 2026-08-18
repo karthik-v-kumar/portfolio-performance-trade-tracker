@@ -1,0 +1,44 @@
+name: Update market data
+
+# Weekdays a little after the US close, plus a manual button.
+# Cron is UTC; 21:30 UTC is 4:30pm ET during daylight saving.
+on:
+  schedule:
+    - cron: "30 21 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install yfinance
+        run: pip install --quiet "yfinance>=0.2.40"
+
+      - name: Fetch prices and index history
+        run: python scripts/fetch_market.py
+
+      - name: Commit if anything changed
+        run: |
+          if git diff --quiet -- docs/data/market.json; then
+            echo "No change."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/market.json
+          git commit -m "Update market data"
+          git push
