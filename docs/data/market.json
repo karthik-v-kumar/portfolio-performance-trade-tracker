@@ -1,6 +1,6 @@
 {
  "updated": null,
- "note": "Written by the Update market data workflow.",
+ "note": "Written by the Update market data workflow. Until then the app uses the prices you set.",
  "prices": {},
  "benchmark": []
 }

@@ -38,23 +38,51 @@ def load_config() -> dict:
     return dict(DEFAULT_CONFIG)
 
 
+CHUNK = 100
+
+
 def fetch_prices(tickers: list[str]) -> tuple[dict, list[str]]:
+    """Last close per ticker, fetched in batches.
+
+    One request per hundred symbols rather than one per symbol -- with a
+    five-hundred-name list the per-symbol approach is slow enough to get
+    rate-limited, and a rate-limited run looks exactly like a delisted ticker.
+    """
     import yfinance as yf
 
-    prices, missing = {}, []
+    prices: dict[str, float] = {}
+    missing: list[str] = []
     if not tickers:
         return prices, missing
-    data = yf.Tickers(" ".join(tickers))
-    for t in tickers:
+
+    for i in range(0, len(tickers), CHUNK):
+        batch = tickers[i:i + CHUNK]
         try:
-            fi = data.tickers[t].fast_info
-            px = fi.get("lastPrice") or fi.get("last_price")
-            if px is None:
-                raise ValueError("no lastPrice")
-            prices[t] = round(float(px), 4)
+            df = yf.download(batch, period="5d", interval="1d",
+                             group_by="ticker", auto_adjust=False,
+                             progress=False, threads=True)
         except Exception as exc:                     # noqa: BLE001
-            missing.append(t)
-            print(f"::warning::no price for {t}: {type(exc).__name__}: {exc}")
+            print(f"::warning::batch {i // CHUNK + 1} failed: "
+                  f"{type(exc).__name__}: {exc}")
+            missing.extend(batch)
+            continue
+
+        for t in batch:
+            try:
+                # yfinance returns a flat frame for one symbol, a MultiIndex
+                # for several.
+                close = df["Close"] if len(batch) == 1 else df[t]["Close"]
+                close = close.dropna()
+                if close.empty:
+                    raise ValueError("no close in the window")
+                prices[t] = round(float(close.iloc[-1]), 4)
+            except Exception:                        # noqa: BLE001
+                missing.append(t)
+
+    if missing:
+        print(f"::warning::no price for {len(missing)} symbol(s): "
+              f"{', '.join(missing[:20])}"
+              f"{' …' if len(missing) > 20 else ''}")
     return prices, missing
 
 

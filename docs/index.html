@@ -294,6 +294,7 @@ details.sub table{background:var(--sunk)}
     <div><div class="nm">Investing Console</div><div class="tag" id="brandtag">demo data</div></div>
   </div>
   <div class="headline"><span class="v" id="hlv">—</span><span class="k" id="hlk">total</span></div>
+  <button class="iconbtn" id="btn-help" title="How this works" aria-label="How this works">?</button>
   <button class="iconbtn" id="btn-setup" title="Setup and data" aria-label="Setup and data">⚙</button>
 </header>
 <nav class="tabs" role="tablist" aria-label="Sections" id="tabs"></nav>
@@ -925,6 +926,9 @@ function renderHold(){
   $("#p-hold").innerHTML=`
     <div class="card">
       <header><h2>Holdings</h2><span class="sub">what you own, lot by lot</span></header>
+      ${S.holdings.length?"":`<div class="body"><div class="note">Add each purchase as its own
+        <b>lot</b> — date, shares, price paid. Average cost and unrealized gain are worked out from
+        those, so they stay right when you buy more later.</div></div>`}
       <div class="toolbar"><span class="lab">Account</span>
         <button class="chip" data-hf="all" aria-pressed="${holdFilter==="all"}">All</button>
         ${accts.map(a=>`<button class="chip" data-hf="${a.id}"
@@ -968,6 +972,10 @@ function renderTrade(){
 
     <div class="card"><header><h2>Open</h2>
       <span class="sub">${signed(openPnl)} unrealized</span></header>
+      ${S.trades.length?"":`<div class="body"><div class="note">Log a trade when you want to judge it
+        as a decision rather than hold it forever. When you close one, the console records
+        <b>when you recorded it</b> as well as the sale date — the gap between those is what keeps a
+        win rate honest, and it shows up under Performance.</div></div>`}
       <div class="toolbar"><span class="lab">Account</span>
         <button class="chip" data-tf="all" aria-pressed="${tradeFilter==="all"}">All</button>
         ${S.accounts.map(a=>`<button class="chip" data-tf="${a.id}"
@@ -1171,6 +1179,9 @@ function renderPlan(){
     <div class="card"><header><h2>What this grows into</h2>
       <span class="sub">before tax · steady returns · your numbers, editable</span></header>
       <div class="body">
+        <div class="note" style="margin-bottom:13px">Starting balance is prefilled from your
+          accounts. Change any figure and everything below recalculates — the point is to compare
+          <b>funds and fees</b>, not to predict the market.</div>
         <div class="fields">
           <label class="f">Starting balance<input type="number" id="pl-s" value="${PLAN.start}" step="1000"></label>
           <label class="f">Added per year<input type="number" id="pl-c" value="${PLAN.contrib}" step="500"></label>
@@ -1677,7 +1688,8 @@ async function fetchNow(){
   say("Fetching…");
   try{
     const fed = await loadFeed(true);
-    if(fed){ say(`Updated from the published data file (${fed} tickers).`);
+    if(fed){ say(`Updated from the published data file (${fed} tickers).`
+      + (S.demo?" Sample history is left alone until you enter your own data.":""));
       renderAll(); return; }
     const r=await refreshPrices();
     let msg=`${r.ok} of ${r.total} prices updated`;
@@ -1707,9 +1719,67 @@ function doImport(){
   }catch(e){ toast("Import failed: "+e.message); }
 }
 
+/* ---------------------------------------------------------- welcome */
+const SEEN = KEY + ":welcomed";
+function welcome(first){
+  modal(first ? "Welcome" : "How this works", `
+    <div class="note" style="font-size:13.5px">A console for tracking what you own and what you
+      trade — built to answer one question most trackers dodge: <b>is picking your own stocks
+      actually beating the index?</b></div>
+
+    <div class="sect"><h3>Getting started</h3><div class="sbody">
+      <ol style="margin:0;padding-left:19px;font-size:13.5px;line-height:1.75">
+        <li><b>Add your accounts</b> — brokerage, IRA, 401(k). Set the cash balance in each.</li>
+        <li><b>Add holdings</b>, one purchase at a time. Each lot keeps its own date and cost, so
+          your average cost and gains are calculated rather than guessed.</li>
+        <li><b>Log trades</b> you want to judge separately from your long-term positions. Closing
+          one moves it to history — nothing is ever deleted.</li>
+      </ol>
+      <div class="note" style="margin-top:10px">Prefer to look around first? The sample data is
+        fictional. Erase it whenever you're ready.</div>
+    </div></div>
+
+    <div class="sect"><h3>Where your data lives</h3><div class="sbody">
+      <div class="note" style="font-size:13.5px">
+        Everything you type is stored <b>in this browser, on this device</b>. There is no account,
+        no server, and nothing is uploaded — which also means:
+        <ul style="margin:9px 0 0;padding-left:19px;line-height:1.7">
+          <li><b>It doesn't follow you between devices.</b> Your phone and your laptop keep separate
+            copies.</li>
+          <li><b>Clearing your browser's site data erases it</b>, as does using a private window.</li>
+          <li>On iPhone, Safari can discard stored data for sites you haven't opened in a while.</li>
+        </ul>
+        <div style="margin-top:10px">So if it matters, take a backup now and then:
+          <b>⚙ Setup → Export backup</b> writes a file you can re-import anywhere.</div>
+      </div>
+    </div></div>
+
+    <div class="sect"><h3>Worth knowing</h3><div class="sbody">
+      <div class="note" style="font-size:13.5px">
+        <b>Prices</b> come from a data file published alongside this page and refresh on their own.
+        Anything not covered, you can type in under ⚙ Setup → Prices.<br><br>
+        <b>No tax calculations.</b> Deliberately — tax treatment depends on details this app has no
+        business guessing at.<br><br>
+        <b>Not advice.</b> It does arithmetic on numbers you supply.
+      </div>
+    </div></div>`,
+    first
+      ? `<button class="btn" onclick="startFresh()">Start empty</button>
+         <span class="sp"></span>
+         <button class="btn primary" onclick="dismissWelcome()">Explore the sample</button>`
+      : `<span class="sp"></span><button class="btn primary" onclick="closeModal()">Got it</button>`);
+}
+function dismissWelcome(){ try{localStorage.setItem(SEEN,"1");}catch(e){} closeModal(); }
+function startFresh(){ try{localStorage.setItem(SEEN,"1");}catch(e){} closeModal(); clearAll(); }
+
 /* ---------------------------------------------------------- auto feed */
 async function loadFeed(manual){
   const cfg=apiCfg(), url=cfg.feed||"./data/market.json";
+  // The sample data is a self-consistent piece of fiction: its index series and
+  // its account history were generated together. Merging today's real closes
+  // into it would produce a chart with a cliff in it, so the feed waits until
+  // there is real data to apply it to.
+  if(S.demo && !manual) return null;
   try{
     const r=await fetch(url,{cache:"no-store"});
     if(!r.ok) return null;
@@ -1717,9 +1787,14 @@ async function loadFeed(manual){
     let n=0;
     if(j.prices){ Object.keys(j.prices).forEach(k=>{ S.prices[k]=j.prices[k]; n++; }); }
     if(j.benchmark && j.benchmark.length){
-      const byM={}; S.bench.forEach(b=>byM[b.m]=b.c);
-      j.benchmark.forEach(b=>{ if(b.c) byM[b.m]=b.c; });
-      S.bench=Object.keys(byM).sort().map(m=>({m,c:byM[m]}));
+      // Replace rather than merge when the sample series is still in place —
+      // two different index scales spliced together is worse than either.
+      if(S.demo){ S.bench=j.benchmark.filter(b=>b.c).map(b=>({m:b.m,c:b.c})); }
+      else {
+        const byM={}; S.bench.forEach(b=>byM[b.m]=b.c);
+        j.benchmark.forEach(b=>{ if(b.c) byM[b.m]=b.c; });
+        S.bench=Object.keys(byM).sort().map(m=>({m,c:byM[m]}));
+      }
     }
     if(j.benchName) S.settings.benchName=j.benchName;
     S.settings.lastFetch=j.updated||new Date().toISOString();
@@ -1751,11 +1826,14 @@ function renderAll(){
   renderDash(); renderHold(); renderTrade(); renderPerf(); renderPlan();
 }
 $("#btn-setup").onclick=()=>openSetup();
+$("#btn-help").onclick=()=>welcome(false);
 let _rz; addEventListener("resize",()=>{clearTimeout(_rz);
   _rz=setTimeout(()=>{renderDash(); renderPlan(); renderPerf();},180);});
 renderAll();
 try{ const t=localStorage.getItem(KEY+":tab"); if(t&&TABS.some(([x])=>x===t)) selectTab(t); }catch(e){}
 loadFeed().then(n=>{ if(n){ renderAll(); toast("Market data updated"); } });
+try{ if(!localStorage.getItem(SEEN)) setTimeout(()=>welcome(true), 380); }
+catch(e){ /* storage blocked — the app still runs, just cannot remember */ }
 </script>
 </body>
 </html>

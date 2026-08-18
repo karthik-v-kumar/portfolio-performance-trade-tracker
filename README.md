@@ -99,12 +99,17 @@ monthly value snapshot all update themselves.
 2. **Settings → Pages** → *Deploy from a branch*, branch `main`, folder `/docs`.
 3. **Settings → Actions → General** → *Workflow permissions* → **Read and write**
    (the workflow commits the data file).
-4. Edit `docs/data/tickers.json` with the symbols you hold:
+4. Optional: edit `docs/data/tickers.json`. It already ships with the **S&P 500
+   plus common ETFs — 515 symbols**, fetched in batches of a hundred, so most
+   holdings are covered without touching it. Add anything unusual you own:
 
    ```json
    { "benchmark": "SPY", "benchmarkName": "S&P 500",
      "historyYears": 8, "tickers": ["VOO", "SCHD", "AAPL"] }
    ```
+
+   Yahoo's format applies — class shares use a hyphen (`BRK-B`). Symbols it
+   can't resolve are skipped and listed under `missing` in `market.json`.
 
 5. **Actions → Update market data → Run workflow** to prime it. After that it
    runs weekdays after the close.
@@ -114,6 +119,16 @@ you want a different cadence. GitHub may pause scheduled workflows on repos
 with no activity for 60 days — a single commit re-enables them.
 
 ---
+
+## Sharing it with someone
+
+Send them the link. That is the whole process — there is no sign-up, and each
+visitor's data is separate because it never leaves their own browser. A first
+run opens with a short explainer covering how to start and where data is kept;
+the **?** button in the header brings it back.
+
+Because the published data file already covers the S&P 500 and the usual ETFs,
+most people's holdings get prices automatically without forking anything.
 
 ## Your data
 
@@ -173,7 +188,7 @@ chrome.
 
 ```
 docs/index.html              the whole app — markup, styles, logic, icons
-docs/data/tickers.json       symbols the workflow fetches (edit this)
+docs/data/tickers.json       symbols the workflow fetches (S&P 500 + ETFs)
 docs/data/market.json        written by the workflow, read by the page
 scripts/fetch_market.py      yfinance → market.json
 .github/workflows/           the schedule
