@@ -1,0 +1,2 @@
+# Used by scripts/fetch_market.py and the Update market data workflow.
+yfinance>=0.2.40

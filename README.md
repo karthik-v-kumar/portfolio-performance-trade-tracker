@@ -157,7 +157,7 @@ python3 -m http.server 8000 --directory docs
 To refresh the data file yourself:
 
 ```bash
-pip install yfinance
+pip install -r requirements.txt
 python scripts/fetch_market.py
 ```
 

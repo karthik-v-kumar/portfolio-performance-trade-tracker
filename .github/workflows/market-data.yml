@@ -25,8 +25,8 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install yfinance
-        run: pip install --quiet "yfinance>=0.2.40"
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
 
       - name: Fetch prices and index history
         run: python scripts/fetch_market.py
